@@ -304,26 +304,26 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
 
 - (BOOL) writeData:(NSData *) data
 {
-    if ((self.deviceState != Connected) || dataToWrite)
+    if (self.deviceState != Connected)
     {
         return NO;
     }
     
-    if ( 0 == _dataWriteSize) {
-        NSUInteger writeWithout = [self.peripheral maximumWriteValueLengthForType: CBCharacteristicWriteWithoutResponse];
-        NSUInteger writeWith = [self.peripheral maximumWriteValueLengthForType: CBCharacteristicWriteWithResponse];
-        
-        if (writeWithout < writeWith) {
-            _dataWriteSize = writeWithout;
-        } else {
-            _dataWriteSize = writeWith;
-        }
-    }
-    
-    dataToWrite = [NSData dataWithData:data];
-    range.location = 0;
-    [self writeChunkOfData];
-    
+//    if ( 0 == _dataWriteSize) {
+//        NSUInteger writeWithout = [self.peripheral maximumWriteValueLengthForType: CBCharacteristicWriteWithoutResponse];
+//        NSUInteger writeWith = [self.peripheral maximumWriteValueLengthForType: CBCharacteristicWriteWithResponse];
+//
+//        if (writeWithout < writeWith) {
+//            _dataWriteSize = writeWithout;
+//        } else {
+//            _dataWriteSize = writeWith;
+//        }
+//    }
+//
+//    dataToWrite = [NSData dataWithData:data];
+//    range.location = 0;
+//    [self writeChunkOfData];
+  [peripheral writeValue:data forCharacteristic:perRXchar type: CBCharacteristicWriteWithoutResponse];
     return YES;
 }
 
