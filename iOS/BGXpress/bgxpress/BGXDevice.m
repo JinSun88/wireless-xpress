@@ -556,7 +556,7 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
         } else {
             
             // Treat this as Invalid GATT handles.
-            [self disconnectWithError:[NSError errorWithDomain:CBATTErrorDomain code:1 userInfo:@{}]];
+//            [self disconnectWithError:[NSError errorWithDomain:CBATTErrorDomain code:1 userInfo:@{}]];
             
         }
         
