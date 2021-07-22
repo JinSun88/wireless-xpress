@@ -27,10 +27,13 @@
 //BGXSS
 
 #define SERVICE_BGXSS_UUID                              @"331a36f5-2459-45ea-9d95-6142f0c4b307"
+#define SERVICE_DSBGXSS_UUID                            @"6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 
 #define CHARACTERISTIC_SS_PER_RX_UUID                   @"a9da6040-0823-4995-94ec-9ce41ca28833"
+#define CHARACTERISTIC_DSSS_PER_RX_UUID                 @"6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 
 #define CHARACTERISTIC_SS_PER_TX_UUID                   @"a73e9a10-628f-4494-a099-12efaf72258f"
+#define CHARACTERISTIC_DSSS_PER_TX_UUID                 @"6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
 #define CHARACTERISTIC_SS_MODE_UUID                     @"75a9f022-af03-4e41-b4bc-9de90a47d50b"
 

@@ -323,7 +323,9 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
 //    dataToWrite = [NSData dataWithData:data];
 //    range.location = 0;
 //    [self writeChunkOfData];
+  if (perRXchar != nil) {
   [peripheral writeValue:data forCharacteristic:perRXchar type: CBCharacteristicWriteWithoutResponse];
+  }
     return YES;
 }
 
@@ -421,12 +423,33 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
 //                        NSLog(@"_fastAckRxBytes: %ld (initial)", (long int)_fastAckRxBytes);
 
                     }
+                } else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_DSSS_PER_RX_UUID]])
+                {
+                  perRXchar = characteristic;
+
+                  if (perRXchar.properties & CBCharacteristicPropertyNotify) {
+                      [peripheral setNotifyValue:YES forCharacteristic:perRXchar];
+                      _fastAck = YES;
+                      NSLog(@"_fastAck: YES");
+                      _writeWithResponse = NO;
+                      _fastAckRxBytes = kInitialFastAckRxBytes;
+//                        NSLog(@"_fastAc kRxBytes: %ld (initial)", (long int)_fastAckRxBytes);
+                    if (self.deviceState  == Interrogating)
+                    {
+                        [self changeDeviceState: Connected];
+                    }
+                }
+                  [self changeDeviceState: Connected];
                 }
                 else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_SS_PER_TX_UUID]])
                 {
                     perTXchar = characteristic;
                     //                NSLog(@"perTXchar discovered");
                     [peripheral setNotifyValue:YES forCharacteristic:perTXchar];
+                } else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_DSSS_PER_TX_UUID]]) {
+                  perTXchar = characteristic;
+                                  NSLog(@"perTXchar discovered");
+                  [peripheral setNotifyValue:YES forCharacteristic:perTXchar];
                 }
                 else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_SS_MODE_UUID]])
                 {
@@ -591,6 +614,64 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
         
         NSLog(@"Model Number: %@", _modelNumber);
         [peripheral readValueForCharacteristic:modeChar];
+    } else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_DSSS_PER_RX_UUID]])
+    {
+      // fast-ack backchannel data received.
+      if (!self.fastAck) {
+          NSLog(@"Warning: fastAck received but fastAck is not enabled.");
+      }
+      
+      NSUInteger length = [characteristic.value length];
+      
+      if (3 == length) {
+          char bytes[3];
+          memcpy(bytes, characteristic.value.bytes, length);
+          BOOL fNeedToCallWriteChunkOfData = NO;
+          uint8_t opcode = bytes[0];
+          uint16_t txbytes;
+          memcpy(&txbytes, bytes + 1, 2);
+          
+          switch (opcode) {
+              case 0x00: // initial credit value
+                  _fastAckTxBytes = txbytes;
+//                    NSLog(@"_fastAckTxBytes: %ld", (long int) _fastAckTxBytes);
+                  break;
+              case 0x01: // update credit
+                  if (_dataWriteSize > 0 && _fastAckTxBytes == 0) {
+                      fNeedToCallWriteChunkOfData = YES;
+                  }
+                  _fastAckTxBytes += txbytes;
+//                    NSLog(@"_fastAckTxBytes: %ld (added %ld)", (long int) _fastAckTxBytes, (long int) txbytes);
+                  break;
+          }
+          
+          if (fNeedToCallWriteChunkOfData) {
+              dispatch_async(dispatch_get_main_queue(), ^{ [self writeChunkOfData]; });
+          }
+      }
+    } else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_DSSS_PER_TX_UUID]]) {
+      NSInteger rxDataLength = characteristic.value.length;
+      if (self.fastAck) {
+          _fastAckRxBytes -= rxDataLength;
+//            NSLog(@"_fastAckRxBytes: %ld (subtracted %ld)", (long int)_fastAckRxBytes, (long int)rxDataLength);
+      }
+      
+      [[self serialDelegate] dataRead:characteristic.value forDevice: self];
+
+      if (self.fastAck) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+              self->_fastAckRxBytes += rxDataLength;
+//                NSLog(@"_fastAckRxBytes: %ld (added %ld)", (long int)_fastAckRxBytes, (long int)rxDataLength);
+              assert(self->_fastAckRxBytes >=0 && self->_fastAckRxBytes <= kInitialFastAckRxBytes);
+              char bytes[3];
+              bytes[0] = 0x01;
+              bytes[1] = rxDataLength & 0x00FF;
+              bytes[2] = (rxDataLength & 0xFF00) >> 8;
+
+              [self.peripheral writeValue:[NSData dataWithBytes:bytes length:3] forCharacteristic:self->perTXchar type:CBCharacteristicWriteWithoutResponse];
+          });
+      }
+
     }
 }
 
@@ -618,6 +699,17 @@ const NSUInteger kHandlerDefaultCapacity = 0x10;
             {
                 [self writeChunkOfData];
             }
+        } else if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_DSSS_PER_RX_UUID]])
+        {
+          if (dataToWrite.length == range.location)
+          {
+              dataToWrite = nil;
+              [[self serialDelegate] dataWrittenForDevice: self];
+          }
+          else if (dataToWrite.length > range.location)
+          {
+              [self writeChunkOfData];
+          }
         }
     }
     else

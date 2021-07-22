@@ -69,7 +69,7 @@
     
     if (Idle == self.scanState)
     {
-        [manager scanForPeripheralsWithServices:@[ [CBUUID UUIDWithString:SERVICE_BGXSS_UUID] ] options:nil];
+        [manager scanForPeripheralsWithServices:@[ [CBUUID UUIDWithString:SERVICE_BGXSS_UUID] , [CBUUID UUIDWithString: SERVICE_DSBGXSS_UUID] ] options:nil];
         [self willChangeValueForKey:@"scanState"];
         _scanState = Scanning;
         [self didChangeValueForKey:@"scanState"];
